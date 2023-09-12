@@ -14,6 +14,7 @@ namespace Symfony\Component\HttpClient\Response;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\Chunk\FirstChunk;
 use Symfony\Component\HttpClient\Chunk\InformationalChunk;
+use Symfony\Component\HttpClient\Exception\ClientException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Internal\Canary;
 use Symfony\Component\HttpClient\Internal\ClientState;
@@ -61,7 +62,7 @@ final class CurlResponse implements ResponseInterface, StreamableInterface
             $ch = $this->handle;
         }
 
-        $this->id = $id = (int) $ch;
+        $this->id = $id = (int)$ch;
         $this->logger = $logger;
         $this->shouldBuffer = $options['buffer'] ?? true;
         $this->timeout = $options['timeout'] ?? null;
@@ -75,7 +76,7 @@ final class CurlResponse implements ResponseInterface, StreamableInterface
 
         if (!$info['response_headers']) {
             // Used to keep track of what we're waiting for
-            curl_setopt($ch, \CURLOPT_PRIVATE, \in_array($method, ['GET', 'HEAD', 'OPTIONS', 'TRACE'], true) && 1.0 < (float) ($options['http_version'] ?? 1.1) ? 'H2' : 'H0'); // H = headers + retry counter
+            curl_setopt($ch, \CURLOPT_PRIVATE, \in_array($method, ['GET', 'HEAD', 'OPTIONS', 'TRACE'], true) && 1.0 < (float)($options['http_version'] ?? 1.1) ? 'H2' : 'H0'); // H = headers + retry counter
         }
 
         curl_setopt($ch, \CURLOPT_HEADERFUNCTION, static function ($ch, string $data) use (&$info, &$headers, $options, $multi, $id, &$location, $resolveRedirect, $logger): int {
@@ -257,6 +258,8 @@ final class CurlResponse implements ResponseInterface, StreamableInterface
             }
 
             $this->doDestruct();
+        } catch (ClientException|TransportException $e) {
+            // skip it ...
         } finally {
             if (\is_resource($this->handle) || $this->handle instanceof \CurlHandle) {
                 curl_setopt($this->handle, \CURLOPT_VERBOSE, false);
@@ -269,7 +272,7 @@ final class CurlResponse implements ResponseInterface, StreamableInterface
      */
     private static function schedule(self $response, array &$runningResponses): void
     {
-        if (isset($runningResponses[$i = (int) $response->multi->handle])) {
+        if (isset($runningResponses[$i = (int)$response->multi->handle])) {
             $runningResponses[$i][1][$response->id] = $response;
         } else {
             $runningResponses[$i] = [$response->multi, [$response->id => $response]];
