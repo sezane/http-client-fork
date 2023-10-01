@@ -14,6 +14,7 @@ namespace Symfony\Component\HttpClient\Response;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\Chunk\FirstChunk;
 use Symfony\Component\HttpClient\Chunk\InformationalChunk;
+use Symfony\Component\HttpClient\Exception\ClientException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Internal\Canary;
 use Symfony\Component\HttpClient\Internal\ClientState;
@@ -241,6 +242,8 @@ final class CurlResponse implements ResponseInterface, StreamableInterface
             }
 
             $this->doDestruct();
+        } catch (ClientException|TransportException) {
+            // skip it ...
         } finally {
             if ($this->handle instanceof \CurlHandle) {
                 curl_setopt($this->handle, \CURLOPT_VERBOSE, false);
